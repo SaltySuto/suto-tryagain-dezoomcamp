@@ -1,0 +1,43 @@
+CREATE OR REPLACE EXTERNAL TABLE `dtc-pl.dezoomcamp2.fhv_tripdata`
+OPTIONS (
+  format = 'CSV',
+  uris = ['gs://suto-bucket/fhv2019/fhv_tripdata_2019-*.csv.gz']
+);
+
+create table `dtc-pl.dezoomcamp2.fhv_tripdata_int` as select * from `dtc-pl.dezoomcamp2.fhv_tripdata`;
+
+--Q1:
+
+select count(1) from `dtc-pl.dezoomcamp2.fhv_tripdata`; --43244696
+
+--Q2:
+--0 MB for the External Table and 317.94MB for the BQ Table
+
+--Q3
+
+select count(1) from `dtc-pl.dezoomcamp2.fhv_tripdata_int` where PUlocationID is null and DOlocationID is null; -- 717748
+
+--Q4
+--Partition by pickup_datetime Cluster on affiliated_base_number
+
+--Q5
+CREATE TABLE
+  `dtc-pl.dezoomcamp2.fhv_tripdata_int_partitioned` (dispatching_base_num string, pickup_datetime timestamp, dropOff_datetime timestamp, PUlocationID integer, DOlocationID integer, SR_Flag string, Affiliated_base_number string)
+PARTITION BY
+  timestamp_trunc(pickup_datetime,day)
+CLUSTER BY
+  affiliated_base_number
+AS (
+  SELECT
+    *
+  FROM
+    `dtc-pl.dezoomcamp2.fhv_tripdata_int`
+);
+
+select distinct affiliated_base_number from `dtc-pl.dezoomcamp2.fhv_tripdata_int` where pickup_datetime >= '2019-03-01' and pickup_datetime<='2019-03-31';
+select distinct affiliated_base_number from `dtc-pl.dezoomcamp2.fhv_tripdata_int_partitioned` where pickup_datetime >= '2019-03-01' and pickup_datetime<='2019-03-31';
+
+--647.87 MB for non-partitioned table and 23.06 MB for the partitioned table
+
+--Q6
+GCP Bucket
